@@ -33,6 +33,15 @@
           >
             開始簽名錄影
           </button>
+
+          <!-- 切換鏡頭按鈕 -->
+          <button
+            @click="toggleCamera"
+            :disabled="!cameraStarted || recording"
+            class="btn secondary"
+          >
+            切換鏡頭
+          </button>
         </div>
       </div>
     </div>
@@ -153,6 +162,7 @@ const errorMessage = ref<string>('')
 const showDialog = ref<boolean>(false)
 const faceDetectionEnabled = ref<boolean>(true)
 const facesDetected = ref<number>(0)
+const isUsingFrontCamera = ref<boolean>(true) // 追蹤目前使用的鏡頭
 
 // 簽名和錄影實例
 let signaturePad: SignaturePad | null = null
@@ -175,10 +185,20 @@ const startCamera = async () => {
   if (!cameraStarted.value) {
     try {
       errorMessage.value = ''
-      mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: true,
-        audio: true,
-      })
+      // 優先嘗試前置鏡頭
+      try {
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user' }, // 前置鏡頭
+          audio: false,
+        })
+      } catch (frontCameraError) {
+        console.warn('前置鏡頭不可用，嘗試使用預設鏡頭:', frontCameraError)
+        // 如果前置鏡頭失敗，則使用任何可用的鏡頭
+        mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: false,
+        })
+      }
 
       if (video.value) {
         video.value.srcObject = mediaStream
@@ -188,6 +208,34 @@ const startCamera = async () => {
     } catch (error) {
       console.error('無法訪問攝像頭:', error)
       errorMessage.value = '無法訪問攝像頭，請確保已授權攝像頭權限'
+    }
+  }
+}
+
+// 切換鏡頭
+const toggleCamera = async () => {
+  if (mediaStream && cameraStarted.value && !recording.value) {
+    // 停止目前的串流
+    mediaStream.getTracks().forEach((track) => track.stop())
+
+    try {
+      errorMessage.value = ''
+      // 切換鏡頭方向
+      isUsingFrontCamera.value = !isUsingFrontCamera.value
+
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: isUsingFrontCamera.value ? 'user' : 'environment' },
+        audio: true,
+      })
+
+      if (video.value) {
+        video.value.srcObject = mediaStream
+      }
+    } catch (error) {
+      console.error('切換鏡頭失敗:', error)
+      errorMessage.value = '切換鏡頭失敗，請重試'
+      // 切換失敗時恢復原狀態
+      isUsingFrontCamera.value = !isUsingFrontCamera.value
     }
   }
 }

@@ -61,7 +61,7 @@ const startCamera = async () => {
       errorMessage.value = ''
       mediaStream = await navigator.mediaDevices.getUserMedia({
         video: true,
-        audio: true,
+        audio: false,
       })
       if (video.value) {
         video.value.srcObject = mediaStream
