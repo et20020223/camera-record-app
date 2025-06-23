@@ -587,6 +587,54 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
+.new-signature-btn {
+  margin-top: 20px;
+}
+
+/* 按鈕樣式 */
+.btn {
+  padding: 12px 24px;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.3s;
+  min-width: 140px;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.primary {
+  background-color: #007bff;
+  color: white;
+}
+
+.primary:hover:not(:disabled) {
+  background-color: #0056b3;
+}
+
+.secondary {
+  background-color: #6c757d;
+  color: white;
+}
+
+.secondary:hover:not(:disabled) {
+  background-color: #545b62;
+}
+
+.success {
+  background-color: #28a745;
+  color: white;
+}
+
+.success:hover:not(:disabled) {
+  background-color: #1e7e34;
+}
+
 .signature-container {
   max-width: 1200px;
   margin: 0 auto;
