@@ -8,18 +8,6 @@
     <div class="main-content">
       <!-- 攝影機預覽區域 -->
       <div class="camera-section">
-        <div class="video-container">
-          <video
-            ref="video"
-            autoplay
-            playsinline
-            width="400"
-            height="300"
-            style="background: #111; border-radius: 8px; margin-bottom: 16px"
-            :style="{ opacity: cameraStarted ? 1 : 0.5 }"
-          ></video>
-        </div>
-
         <div class="camera-controls">
           <div class="camera-status" v-if="cameraStarted">
             <span class="status-indicator"></span>
