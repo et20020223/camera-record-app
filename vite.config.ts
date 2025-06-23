@@ -13,4 +13,8 @@ export default defineConfig({
     },
   },
   base: '/camera-record-app/',
+  server: {
+    port: 5173,
+    host: 'localhost',
+  },
 })
