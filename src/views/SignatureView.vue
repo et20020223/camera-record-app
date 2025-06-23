@@ -109,14 +109,21 @@
         <!-- 錄影結果 -->
         <div class="result-item">
           <h4>錄影</h4>
-          <video :src="completedData.videoUrl" controls class="result-video"></video>
-          <a
-            :href="completedData.videoUrl"
-            download="signature-recording.webm"
-            class="download-btn"
-          >
+          <video
+            :src="completedData.videoUrl"
+            :type="completedData.mimeType || 'video/mp4'"
+            controls
+            class="result-video"
+            playsinline
+            webkit-playsinline
+            preload="metadata"
+          ></video>
+          <div class="video-info" v-if="completedData.mimeType">
+            <p>格式: {{ completedData.mimeType }}</p>
+          </div>
+          <button @click="downloadVideo" class="download-btn" v-if="completedData.videoBlob">
             下載錄影
-          </a>
+          </button>
         </div>
       </div>
 
@@ -166,6 +173,8 @@ let camera: Camera | null = null
 const completedData = ref<{
   signatureDataUrl: string
   videoUrl: string
+  videoBlob?: Blob
+  mimeType?: string
 } | null>(null)
 
 // 啟動攝影機
@@ -427,7 +436,35 @@ const startRecording = () => {
   if (mediaStream && !recording.value) {
     try {
       recordedChunks = []
-      mediaRecorder = new MediaRecorder(mediaStream)
+
+      // 檢測瀏覽器支援的格式，優先使用 iPhone 相容的格式
+      let options = {}
+      let mimeType = ''
+
+      if (MediaRecorder.isTypeSupported('video/mp4; codecs="avc1.42E01E,mp4a.40.2"')) {
+        // H.264 + AAC (iPhone 最佳相容性)
+        mimeType = 'video/mp4; codecs="avc1.42E01E,mp4a.40.2"'
+      } else if (MediaRecorder.isTypeSupported('video/mp4')) {
+        // 一般 MP4
+        mimeType = 'video/mp4'
+      } else if (MediaRecorder.isTypeSupported('video/webm; codecs="vp8,opus"')) {
+        // WebM VP8 (Android 相容)
+        mimeType = 'video/webm; codecs="vp8,opus"'
+      } else if (MediaRecorder.isTypeSupported('video/webm')) {
+        // 一般 WebM
+        mimeType = 'video/webm'
+      } else {
+        // 回退到預設
+        mimeType = ''
+      }
+
+      if (mimeType) {
+        options = { mimeType }
+      }
+
+      console.log('使用的錄影格式:', mimeType || '預設格式')
+
+      mediaRecorder = new MediaRecorder(mediaStream, options)
 
       mediaRecorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
@@ -436,13 +473,17 @@ const startRecording = () => {
       }
 
       mediaRecorder.onstop = () => {
-        const blob = new Blob(recordedChunks, { type: 'video/webm' })
+        // 使用檢測到的 MIME 類型或回退類型
+        const finalMimeType = mimeType || 'video/mp4'
+        const blob = new Blob(recordedChunks, { type: finalMimeType })
         const videoUrl = URL.createObjectURL(blob)
 
         if (signaturePad && !signaturePad.isEmpty()) {
           completedData.value = {
             signatureDataUrl: signaturePad.toDataURL(),
             videoUrl: videoUrl,
+            videoBlob: blob, // 保存 blob 用於下載
+            mimeType: finalMimeType, // 保存格式信息
           }
         }
       }
@@ -492,6 +533,29 @@ const completeSignature = () => {
     stopCamera()
     stopFaceDetection()
     showDialog.value = false
+  }
+}
+
+// 下載錄影
+const downloadVideo = () => {
+  if (completedData.value?.videoBlob) {
+    const blob = completedData.value.videoBlob
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+
+    // 根據 MIME 類型設定檔案副檔名
+    const mimeType = completedData.value.mimeType || 'video/mp4'
+    let extension = '.mp4'
+    if (mimeType.includes('webm')) {
+      extension = '.webm'
+    }
+
+    a.href = url
+    a.download = `signature-video-${new Date().getTime()}${extension}`
+    document.body.appendChild(a)
+    a.click()
+    document.body.removeChild(a)
+    URL.revokeObjectURL(url)
   }
 }
 
@@ -819,54 +883,27 @@ onUnmounted(() => {
   height: auto;
   border-radius: 8px;
   margin-bottom: 15px;
+  /* 確保 iPhone 可以內嵌播放 */
+  -webkit-playsinline: true;
 }
 
-.new-signature-btn {
-  margin-top: 20px;
+.video-info {
+  margin: 10px 0;
+  text-align: center;
 }
 
-/* 按鈕樣式 */
-.btn {
-  padding: 12px 24px;
-  border: none;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  transition: all 0.3s;
-  min-width: 140px;
+.video-info p {
+  margin: 5px 0;
+  color: #666;
+  font-size: 14px;
 }
 
-.btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.primary {
-  background-color: #007bff;
-  color: white;
-}
-
-.primary:hover:not(:disabled) {
-  background-color: #0056b3;
-}
-
-.secondary {
-  background-color: #6c757d;
-  color: white;
-}
-
-.secondary:hover:not(:disabled) {
-  background-color: #545b62;
-}
-
-.success {
-  background-color: #28a745;
-  color: white;
-}
-
-.success:hover:not(:disabled) {
-  background-color: #1e7e34;
+/* 針對 iOS 的特殊處理 */
+@supports (-webkit-appearance: none) {
+  .result-video {
+    /* iOS Safari 特殊設定 */
+    object-fit: contain;
+  }
 }
 
 .download-btn {
@@ -878,6 +915,8 @@ onUnmounted(() => {
   border-radius: 6px;
   font-size: 14px;
   transition: background-color 0.3s;
+  border: none;
+  cursor: pointer;
 }
 
 .download-btn:hover {
