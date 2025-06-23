@@ -881,13 +881,11 @@ onUnmounted(() => {
 
   video {
     width: 100% !important;
-    max-width: 350px;
     height: auto !important;
   }
 
   .dialog-controls {
     bottom: 10px;
-    flex-direction: column;
     align-items: center;
     gap: 10px;
   }

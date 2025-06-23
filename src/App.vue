@@ -6,7 +6,6 @@ import { RouterLink, RouterView } from 'vue-router'
   <div id="app">
     <nav class="main-nav">
       <RouterLink to="/">首頁</RouterLink>
-      <RouterLink to="/camera">攝影機</RouterLink>
       <RouterLink to="/signature">簽名錄影</RouterLink>
     </nav>
 
@@ -49,9 +48,5 @@ import { RouterLink, RouterView } from 'vue-router'
 .main-nav a.router-link-active {
   background: #007bff;
   color: white;
-}
-
-main {
-  padding: 2rem;
 }
 </style>
